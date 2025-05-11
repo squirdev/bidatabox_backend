@@ -4,6 +4,8 @@ const jwt = require("jsonwebtoken");
 const router = express.Router();
 const User = require("../../models/user.model");
 const bcrypt = require("bcrypt");
+const fs = require("fs");
+const path = require("path");
 
 const {
   PhoneQuery,
@@ -200,6 +202,101 @@ module.exports.phoneUpload = async (req, res) => {
   }
 };
 
+module.exports.phonePreUpload = async (req, res) => {
+  const { taskName, countryCode, zipIndex } = req.body;
+  const { user } = req;
+
+  try {
+    if (!taskName || !countryCode) {
+      return res.status(400).json({ success: false, message: "Bad Request" });
+    }
+
+    const fileName = `phone${zipIndex}.txt`;
+    const filePath = path.join(
+      process.cwd(),
+      "server_data",
+      countryCode,
+      fileName
+    );
+
+    if (!fs.existsSync(filePath)) {
+      return res
+        .status(404)
+        .json({ success: false, message: "File not found" });
+    }
+
+    if (user.phoneCost > user.balance)
+      return res.status(400).json({
+        success: false,
+        message: "User balance is insufficient. Please recharge.",
+      });
+
+    const fakeUploadedFile = {
+      name: fileName,
+      mv: async (destPath) => {
+        return fs.promises.copyFile(filePath, destPath);
+      },
+    };
+
+    const upLoadResult = await uploadPhoneDetectFile({
+      taskName,
+      countryCode,
+      file: fakeUploadedFile,
+    });
+    // const upLoadResult = {
+    //   RES: "100",
+    //   ERR: "",
+    //   DATA: {
+    //     sendid: "2560608",
+    //     sendID: "2560608",
+    //     line: "2000",
+    //     jifen: "49.8332000+0.0000",
+    //   },
+    // };
+
+    if (upLoadResult?.RES == "100") {
+      const sendID = upLoadResult.DATA.sendID;
+      const entireNumber = Number(upLoadResult.DATA.line);
+      const newPhoneDetect = new PhoneDetect({
+        userid: user._id,
+        username: user.realname,
+        taskname: taskName,
+        sendid: sendID,
+        entirenumber: entireNumber,
+      });
+      await newPhoneDetect.save();
+
+      const decreaseAmount = (user.phoneCost * entireNumber) / 200000;
+
+      await User.updateOne(
+        { _id: user._id },
+        { $inc: { balance: -decreaseAmount } }
+      );
+
+      const pricePerPhone = process.env.PHONE_ACTIVE_DETECT_PRICE || 5.715;
+
+      const newActivityLog = new ActivityLog({
+        userid: user._id,
+        username: user.realname,
+        entirenumber: entireNumber,
+        type: "Number Active Detect",
+        perprice: user.phoneCost,
+        consume: decreaseAmount / 7.2, // rubbish code, 100$ is 720 point
+        benefit: decreaseAmount / 7.2 - (pricePerPhone * entireNumber) / 10000, // rubbish code, you have to calculate each number's benefit
+      });
+      await newActivityLog.save();
+
+      const id = newPhoneDetect._id;
+
+      pollPhoneQuery(id, sendID);
+    }
+    res.json(upLoadResult);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 module.exports.socialUpload = async (req, res) => {
   const { social, taskName, activeDay, countryCode } = req.body;
   const file = req.files?.file;
@@ -235,6 +332,118 @@ module.exports.socialUpload = async (req, res) => {
       countryCode,
     });
     console.log("TELEGRAM DETECT::", upLoadResult);
+    // const upLoadResult = {
+    //   RES: "100",
+    //   ERR: "",
+    //   DATA: {
+    //     sendid: "2562823",
+    //     sendID: "2562823",
+    //     line: "2000",
+    //     jifen: "42.9752000+0.0000",
+    //   },
+    // };
+
+    if (upLoadResult?.RES == "100") {
+      const sendID = upLoadResult.DATA.sendID;
+      const entireNumber = Number(upLoadResult.DATA.line);
+      const newSocialDetect = new SocialDetect({
+        userid: user._id,
+        username: user.realname,
+        taskname: taskName,
+        sendid: sendID,
+        entirenumber: entireNumber,
+        type: social,
+        activeday: activeDay,
+      });
+      await newSocialDetect.save();
+
+      const costPerUnit = social === "TG" ? user.tgCost : user.wsCost;
+      const decreaseAmount = (costPerUnit * entireNumber) / 200000;
+
+      await User.updateOne(
+        { _id: user._id },
+        { $inc: { balance: -decreaseAmount } }
+      );
+
+      const socialActiveDetectPrice =
+        social == "TG"
+          ? process.env.TG_ACTIVE_DETECT_PRICE || 5.715
+          : process.env.WS_ACTIVE_DETECT_PRICE || 2.142;
+
+      const newActivityLog = new ActivityLog({
+        userid: user._id,
+        username: user.realname,
+        entirenumber: entireNumber,
+        type: social === "TG" ? "TG Days Detect" : "WS Days Detect",
+        perprice: user.phoneCost,
+        consume: decreaseAmount / 7.2,
+        benefit:
+          decreaseAmount / 7.2 -
+          (socialActiveDetectPrice * entireNumber) / 10000,
+      });
+      await newActivityLog.save();
+
+      const id = newSocialDetect._id;
+
+      pollSocialQuery(id, sendID);
+    }
+    res.json(upLoadResult);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+module.exports.socialPreUpload = async (req, res) => {
+  const { social, taskName, activeDay, countryCode, zipIndex } = req.body;
+  const { user } = req;
+
+  try {
+    if (!taskName || !countryCode || !social || !activeDay) {
+      return res.status(400).json({ success: false, message: "Bad Request" });
+    }
+
+    if (social == "TG" && user.tgCost > user.balance)
+      return res.status(400).json({
+        success: false,
+        message: "User balance is insufficient. Please recharge.",
+      });
+
+    if (social == "WS" && user.wsCost > user.balance)
+      return res.status(400).json({
+        success: false,
+        message: "User balance is insufficient. Please recharge.",
+      });
+
+    const fileName = `phone${zipIndex}.txt`;
+    const filePath = path.join(
+      process.cwd(),
+      "server_data",
+      countryCode,
+      fileName
+    );
+
+    if (!fs.existsSync(filePath)) {
+      return res
+        .status(404)
+        .json({ success: false, message: "File not found" });
+    }
+
+    const fakeUploadedFile = {
+      name: fileName,
+      mv: async (destPath) => {
+        return fs.promises.copyFile(filePath, destPath);
+      },
+    };
+
+    const upLoadResult = await uploadSocialDetectFile({
+      social,
+      taskName,
+      activeDay,
+      countryCode,
+      file: fakeUploadedFile,
+    });
+    console.log("SOCIAL PRE DETECT::", upLoadResult);
     // const upLoadResult = {
     //   RES: "100",
     //   ERR: "",
