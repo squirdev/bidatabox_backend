@@ -23,9 +23,6 @@ module.exports.createUser = async (req, res) => {
       username: request.username,
       password: request.password,
       realname: request.realname,
-      tgCost: request.tgCost,
-      wsCost: request.wsCost,
-      phoneCost: request.phoneCost,
     });
 
     await newUser.save();
@@ -50,9 +47,6 @@ module.exports.updateUser = async (req, res) => {
         username: request.username,
         password: request.password,
         realname: request.realname,
-        tgCost: request.tgCost,
-        wsCost: request.wsCost,
-        phoneCost: request.phoneCost,
       },
       { new: true }
     );

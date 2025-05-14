@@ -6,9 +6,6 @@ const UserSchema = new mongoose.Schema(
     password: { type: String, required: true },
     realname: { type: String },
     balance: { type: Number, default: 0 },
-    tgCost: { type: Number, default: 0 },
-    wsCost: { type: Number, default: 0 },
-    phoneCost: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
