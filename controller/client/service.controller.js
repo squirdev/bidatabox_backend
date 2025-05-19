@@ -1,9 +1,6 @@
 require("dotenv").config();
 const express = require("express");
-const jwt = require("jsonwebtoken");
-const router = express.Router();
 const User = require("../../models/user.model");
-const bcrypt = require("bcrypt");
 const fs = require("fs");
 const path = require("path");
 
@@ -123,13 +120,13 @@ async function pollSocialQuery(id, sendID) {
 }
 
 module.exports.phoneUpload = async (req, res) => {
-  const { taskName, countryCode } = req.body;
+  const { taskName } = req.body;
   const file = req.files?.file;
   const { user } = req;
-  console.log("PHONE UPLOAD", taskName, countryCode);
+  console.log("PHONE UPLOAD", taskName);
 
   try {
-    if (!taskName || !countryCode || !file) {
+    if (!taskName || !file) {
       return res.status(400).json({ success: false, message: "Bad Request" });
     }
 
@@ -146,7 +143,6 @@ module.exports.phoneUpload = async (req, res) => {
 
     const upLoadResult = await uploadPhoneDetectFile({
       taskName,
-      countryCode,
       file,
     });
     // const upLoadResult = {
@@ -299,13 +295,13 @@ module.exports.phonePreUpload = async (req, res) => {
 };
 
 module.exports.socialUpload = async (req, res) => {
-  const { social, taskName, activeDay, countryCode } = req.body;
+  const { social, taskName, activeDay } = req.body;
   const file = req.files?.file;
   const { user } = req;
-  console.log("SOCIAL UPLOAD", taskName, countryCode, social, activeDay);
+  console.log("SOCIAL UPLOAD", taskName, social, activeDay);
 
   try {
-    if (!taskName || !countryCode || !file || !social || !activeDay) {
+    if (!taskName || !file || !social || !activeDay) {
       return res.status(400).json({ success: false, message: "Bad Request" });
     }
 
@@ -325,7 +321,6 @@ module.exports.socialUpload = async (req, res) => {
       social,
       taskName,
       activeDay,
-      countryCode,
     });
     console.log("TELEGRAM DETECT::", upLoadResult);
     // const upLoadResult = {

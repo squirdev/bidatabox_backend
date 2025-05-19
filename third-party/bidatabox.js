@@ -47,7 +47,6 @@ module.exports.uploadSocialDetectFile = async ({
   social,
   taskName,
   activeDay,
-  countryCode,
 }) => {
   try {
     const tempDir = path.join(__dirname, "temp");
