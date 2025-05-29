@@ -134,7 +134,7 @@ module.exports.phoneUpload = async (req, res) => {
     const lines = fileContent.split(/\r?\n/);
     const lineCount = lines.filter((line) => line.trim() !== "").length;
 
-    const perCost = lineCount >= 200000 ? 0.00625 : 0.0065;
+    const perCost = lineCount >= 200000 ? 0.0035 : 0.0035;
     if (lineCount * perCost > user.balance)
       return res.status(400).json({
         success: false,
@@ -222,7 +222,7 @@ module.exports.phonePreUpload = async (req, res) => {
         .json({ success: false, message: "File not found" });
     }
 
-    if (user.balance < 1250)
+    if (user.balance < 700)
       return res.status(400).json({
         success: false,
         message: "User balance is insufficient. Please recharge.",
@@ -263,7 +263,7 @@ module.exports.phonePreUpload = async (req, res) => {
       });
       await newPhoneDetect.save();
 
-      const decreaseAmount = 1250;
+      const decreaseAmount = 700;
 
       await User.updateOne(
         { _id: user._id },
@@ -277,7 +277,7 @@ module.exports.phonePreUpload = async (req, res) => {
         username: user.realname,
         entirenumber: entireNumber,
         type: "Number Active Detect",
-        perprice: 0.00625,
+        perprice: 0.0035,
         consume: decreaseAmount / 7.2, // rubbish code, 100$ is 720 point
         benefit: decreaseAmount / 7.2 - pricePerPhone * 20, // rubbish code, you have to calculate each number's benefit
       });
@@ -309,7 +309,15 @@ module.exports.socialUpload = async (req, res) => {
     const lines = fileContent.split(/\r?\n/);
     const lineCount = lines.filter((line) => line.trim() !== "").length;
 
-    const perCost = lineCount >= 200000 ? 0.00625 : 0.0065;
+    const perCost =
+      social === "TG"
+        ? lineCount >= 200000
+          ? 0.00625
+          : 0.0065
+        : lineCount >= 200000
+        ? 0.0018
+        : 0.002;
+
     if (lineCount * perCost > user.balance)
       return res.status(400).json({
         success: false,
@@ -393,7 +401,10 @@ module.exports.socialPreUpload = async (req, res) => {
       return res.status(400).json({ success: false, message: "Bad Request" });
     }
 
-    if (user.balance < 1250)
+    if (
+      (social === "TG" && user.balance < 1250) ||
+      (social === "WS" && user.balance < 360)
+    )
       return res.status(400).json({
         success: false,
         message: "User balance is insufficient. Please recharge.",
@@ -453,8 +464,15 @@ module.exports.socialPreUpload = async (req, res) => {
       });
       await newSocialDetect.save();
 
-      const perCost = entireNumber >= 200000 ? 0.00625 : 0.0065;
-      const decreaseAmount = 1250;
+      const perCost =
+        social === "TG"
+          ? entireNumber >= 200000
+            ? 0.00625
+            : 0.0065
+          : entireNumber >= 200000
+          ? 0.0018
+          : 0.002;
+      const decreaseAmount = social === "TG" ? 1250 : 360;
 
       await User.updateOne(
         { _id: user._id },
