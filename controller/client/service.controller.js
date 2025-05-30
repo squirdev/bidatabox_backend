@@ -141,20 +141,23 @@ module.exports.phoneUpload = async (req, res) => {
         message: "User balance is insufficient. Please recharge.",
       });
 
-    const upLoadResult = await uploadPhoneDetectFile({
-      taskName,
-      file,
-    });
-    // const upLoadResult = {
-    //   RES: "100",
-    //   ERR: "",
-    //   DATA: {
-    //     sendid: "2560608",
-    //     sendID: "2560608",
-    //     line: "2000",
-    //     jifen: "49.8332000+0.0000",
-    //   },
-    // };
+    // const upLoadResult = await uploadPhoneDetectFile({
+    //   taskName,
+    //   file,
+    // });
+
+    const upLoadResult = {
+      RES: "100",
+      ERR: "",
+      DATA: {
+        sendid: "2560608",
+        sendID: "2560608",
+        line: "2000",
+        jifen: "49.8332000+0.0000",
+      },
+    };
+
+    res.json(upLoadResult);
 
     if (upLoadResult?.RES == "100") {
       const sendID = upLoadResult.DATA.sendID;
