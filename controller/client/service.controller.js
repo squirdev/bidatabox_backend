@@ -42,7 +42,11 @@ async function pollPhoneQuery(id, sendID) {
           type: 1,
         });
         const filename = `${sendID}.zip`;
-        await saveBinaryFile(downloadResult, filename);
+        try {
+          await saveBinaryFile(downloadResult, filename);
+        } catch (error) {
+          console.log("Error while saving file", error);
+        }
         await PhoneDetect.findByIdAndUpdate(id, {
           activenumber: activatedNumber,
           unregisternumber: unRegisteredNumber,
