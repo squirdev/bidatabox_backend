@@ -6,5 +6,10 @@ const authMiddleware = require("../../middleware/user.middleware");
 const controller = require("../../controller/client/user.controller");
 
 router.get("/api/user/getInfo", authMiddleware, controller.getInfo);
+router.post(
+  "/api/user/update-user-credit",
+  authMiddleware,
+  controller.updateCredit
+);
 
 module.exports = router;
