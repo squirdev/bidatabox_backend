@@ -138,7 +138,10 @@ module.exports.phoneUpload = async (req, res) => {
     const lines = fileContent.split(/\r?\n/);
     const lineCount = lines.filter((line) => line.trim() !== "").length;
 
-    const perCost = lineCount >= 200000 ? 0.0035 : 0.0035;
+    const perCost =
+      lineCount >= 200000
+        ? process.env.PHONE_ACTIVE_DISCOUNT_SELL_PRICE / 10000
+        : process.env.PHONE_ACTIVE_SELL_PRICE / 10000;
     if (lineCount * perCost > user.balance)
       return res.status(400).json({
         success: false,
@@ -190,8 +193,8 @@ module.exports.phoneUpload = async (req, res) => {
         entirenumber: entireNumber,
         type: "Number Active Detect",
         perprice: perCost,
-        consume: decreaseAmount / 7.2, // rubbish code, 100$ is 720 point
-        benefit: decreaseAmount / 7.2 - (pricePerPhone * entireNumber) / 10000, // rubbish code, you have to calculate each number's benefit
+        consume: decreaseAmount,
+        benefit: decreaseAmount - (pricePerPhone * entireNumber) / 10000,
       });
       await newActivityLog.save();
 
@@ -229,7 +232,7 @@ module.exports.phonePreUpload = async (req, res) => {
         .json({ success: false, message: "File not found" });
     }
 
-    if (user.balance < 700)
+    if (user.balance < process.env.PHONE_ACTIVE_DISCOUNT_SELL_PRICE * 20)
       return res.status(400).json({
         success: false,
         message: "User balance is insufficient. Please recharge.",
@@ -270,23 +273,23 @@ module.exports.phonePreUpload = async (req, res) => {
       });
       await newPhoneDetect.save();
 
-      const decreaseAmount = 700;
+      const decreaseAmount = process.env.PHONE_ACTIVE_DISCOUNT_SELL_PRICE * 20;
 
       await User.updateOne(
         { _id: user._id },
         { $inc: { balance: -decreaseAmount } }
       );
 
-      const pricePerPhone = process.env.PHONE_ACTIVE_DETECT_PRICE || 5.715;
+      const pricePerPhone = process.env.PHONE_ACTIVE_DETECT_PRICE || 3.571;
 
       const newActivityLog = new ActivityLog({
         userid: user._id,
         username: user.realname,
         entirenumber: entireNumber,
         type: "Number Active Detect",
-        perprice: 0.0035,
-        consume: decreaseAmount / 7.2, // rubbish code, 100$ is 720 point
-        benefit: decreaseAmount / 7.2 - pricePerPhone * 20, // rubbish code, you have to calculate each number's benefit
+        perprice: process.env.PHONE_ACTIVE_DETECT_PRICE / 10000,
+        consume: decreaseAmount,
+        benefit: decreaseAmount - pricePerPhone * 20,
       });
       await newActivityLog.save();
 
@@ -319,11 +322,11 @@ module.exports.socialUpload = async (req, res) => {
     const perCost =
       social === "TG"
         ? lineCount >= 200000
-          ? 0.00625
-          : 0.0065
+          ? process.env.TG_ACTIVE_DISCOUNT_SELL_PRICE / 10000
+          : process.env.TG_ACTIVE_SELL_PRICE / 10000
         : lineCount >= 200000
-        ? 0.0018
-        : 0.002;
+        ? process.env.WS_ACTIVE_DISCOUNT_SELL_PRICE / 10000
+        : process.env.WS_ACTIVE_SELL_PRICE / 10000;
 
     if (lineCount * perCost > user.balance)
       return res.status(400).json({
@@ -372,7 +375,7 @@ module.exports.socialUpload = async (req, res) => {
 
       const socialActiveDetectPrice =
         social == "TG"
-          ? process.env.TG_ACTIVE_DETECT_PRICE || 5.715
+          ? process.env.TG_ACTIVE_DETECT_PRICE || 4.286
           : process.env.WS_ACTIVE_DETECT_PRICE || 2.142;
 
       const newActivityLog = new ActivityLog({
@@ -381,10 +384,9 @@ module.exports.socialUpload = async (req, res) => {
         entirenumber: entireNumber,
         type: social === "TG" ? "TG Days Detect" : "WS Days Detect",
         perprice: perCost,
-        consume: decreaseAmount / 7.2,
+        consume: decreaseAmount,
         benefit:
-          decreaseAmount / 7.2 -
-          (socialActiveDetectPrice * entireNumber) / 10000,
+          decreaseAmount - (socialActiveDetectPrice * entireNumber) / 10000,
       });
       await newActivityLog.save();
 
@@ -409,8 +411,10 @@ module.exports.socialPreUpload = async (req, res) => {
     }
 
     if (
-      (social === "TG" && user.balance < 1250) ||
-      (social === "WS" && user.balance < 360)
+      (social === "TG" &&
+        user.balance < process.env.TG_ACTIVE_DISCOUNT_SELL_PRICE * 20) ||
+      (social === "WS" &&
+        user.balance < process.env.WS_ACTIVE_DISCOUNT_SELL_PRICE * 20)
     )
       return res.status(400).json({
         success: false,
@@ -473,13 +477,13 @@ module.exports.socialPreUpload = async (req, res) => {
 
       const perCost =
         social === "TG"
-          ? entireNumber >= 200000
-            ? 0.00625
-            : 0.0065
-          : entireNumber >= 200000
-          ? 0.0018
-          : 0.002;
-      const decreaseAmount = social === "TG" ? 1250 : 360;
+          ? process.env.TG_ACTIVE_DISCOUNT_SELL_PRICE / 10000
+          : process.env.WS_ACTIVE_DISCOUNT_SELL_PRICE / 10000;
+
+      const decreaseAmount =
+        social === "TG"
+          ? process.env.TG_ACTIVE_DISCOUNT_SELL_PRICE * 20
+          : process.env.WS_ACTIVE_DISCOUNT_SELL_PRICE * 20;
 
       await User.updateOne(
         { _id: user._id },
@@ -497,8 +501,8 @@ module.exports.socialPreUpload = async (req, res) => {
         entirenumber: entireNumber,
         type: social === "TG" ? "TG Days Detect" : "WS Days Detect",
         perprice: perCost,
-        consume: decreaseAmount / 7.2,
-        benefit: decreaseAmount / 7.2 - socialActiveDetectPrice * 20,
+        consume: decreaseAmount,
+        benefit: decreaseAmount - socialActiveDetectPrice * 20,
       });
       await newActivityLog.save();
 

@@ -24,6 +24,28 @@ app.use("/upload", express.static(path.join(systemRootDir, "upload")));
 // app.use("/downloads", express.static(path.join(__dirname, "downloads")));
 app.use(fileUpload());
 
+// check env
+
+const requiredEnvVars = [
+  "PHONE_ACTIVE_DETECT_PRICE",
+  "PHONE_ACTIVE_SELL_PRICE",
+  "PHONE_ACTIVE_DISCOUNT_SELL_PRICE",
+  "TG_ACTIVE_DETECT_PRICE",
+  "TG_ACTIVE_SELL_PRICE",
+  "TG_ACTIVE_DISCOUNT_SELL_PRICE",
+  "WS_ACTIVE_DETECT_PRICE",
+  "WS_ACTIVE_SELL_PRICE",
+  "WS_ACTIVE_DISCOUNT_SELL_PRICE",
+];
+
+const missingVars = requiredEnvVars.filter((key) => !process.env[key]);
+
+if (missingVars.length > 0) {
+  throw new Error(
+    `Missing required environment variable(s): ${missingVars.join(", ")}`
+  );
+}
+
 // Connect to MongoDB
 mongoose
   .connect(process.env.MONGO_URI, {
