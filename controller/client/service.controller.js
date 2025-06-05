@@ -328,6 +328,10 @@ module.exports.socialUpload = async (req, res) => {
         ? process.env.WS_ACTIVE_DISCOUNT_SELL_PRICE / 10000
         : process.env.WS_ACTIVE_SELL_PRICE / 10000;
 
+    console.log("lineCount", lineCount);
+    console.log("perCost", perCost);
+    console.log("user.balance", user.balance);
+
     if (lineCount * perCost > user.balance)
       return res.status(400).json({
         success: false,
